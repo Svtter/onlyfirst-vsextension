@@ -1,9 +1,8 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
-import { privateEncrypt } from 'crypto';
-import { isString } from 'util';
-import { isNumberObject, isStringObject } from 'util/types';
+import { type } from 'os';
 import * as vscode from 'vscode';
+import { processParagraph } from './onlyfirst/onlyfirst';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -23,11 +22,21 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	// get text from editor
-	let getText = () =>  {
+	let getText = (): [string, vscode.Selection]  =>  {
 		const activeEditor = vscode.window.activeTextEditor;
 		const selection = activeEditor?.selection;
 		const text = activeEditor?.document.getText(selection);
-		return text;
+		if (typeof text === 'string' && selection instanceof vscode.Selection) {
+			return [text, selection];
+		}
+		throw new Error('text or selection empty');
+	};
+
+	let editText = (text: string, selection: vscode.Selection) => {
+		const activeEditor = vscode.window.activeTextEditor;
+		activeEditor?.edit((editBuilder: vscode.TextEditorEdit) => {
+			editBuilder.replace(selection, text);
+		});
 	};
 
 	// show text from text.
@@ -41,8 +50,10 @@ export function activate(context: vscode.ExtensionContext) {
 
 	let disposable2 = vscode.commands.registerCommand('onlyfirst.handle', ()=> {
 		// const {text} = activeEditor.document.lineAt(activeEditor.selection.active.line);
-		const text = getText();
-		showText(text);
+		const [text, selection] = getText();
+		const replacedText = processParagraph(text);
+		// showText(text);
+		editText(replacedText, selection);
 	});
 
 	context.subscriptions.push(disposable);
